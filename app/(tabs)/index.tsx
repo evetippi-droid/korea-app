@@ -225,7 +225,7 @@ const CATEGORY_CONFIG: CategoryConfig[] = [
   {
     id: "esemed ja asjad",
     icon: "📦",
-    label: { et: "Esmed ja asjad", ko: "물건과 소지품" },
+    label: { et: "Esemed ja asjad", ko: "물건과 소지품" },
     subcategories: [
       { id: "koduesemed", label: { et: "Koduesemed", ko: "생활용품" } },
       { id: "riided", label: { et: "Riided", ko: "옷" } },
