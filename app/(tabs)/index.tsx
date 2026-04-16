@@ -19,7 +19,7 @@ type KoreaKeelRow = {
   id: string;
   created_at: string | null;
   kr: string;
-  et: string;
+  et: string | null;
   roman: string | null;
   type: string | null;
   difficulty: string | null;
@@ -80,183 +80,196 @@ const DIFFICULTY_OPTIONS = ["ALL", "1", "2", "3"];
 
 const CATEGORY_CONFIG: CategoryConfig[] = [
   {
-    id: "tähestik",
+    id: "Tähestik",
     icon: "🔤",
     label: { et: "Tähestik", ko: "알파벳" },
-    subcategories: [],
+    subcategories: [
+      { id: "Tähed", label: { et: "Tähed", ko: "자모" } },
+      { id: "Silbid", label: { et: "Silbid", ko: "음절" } },
+    ],
   },
   {
-    id: "igapäevaelu",
+    id: "Igapäevaelu",
     icon: "🗣️",
     label: { et: "Igapäevaelu", ko: "일상생활" },
     subcategories: [
-      { id: "igapäevane", label: { et: "Igapäevane", ko: "일상 표현" } },
-      { id: "vestlus", label: { et: "Vestlus", ko: "회화" } },
-      { id: "küsimused", label: { et: "Küsimused", ko: "질문" } },
-      { id: "tegevused", label: { et: "Tegevused", ko: "활동" } },
-      { id: "aeg", label: { et: "Aeg", ko: "시간" } },
-      { id: "rutiin", label: { et: "Rutiin", ko: "루틴" } },
+      { id: "Igapäevane", label: { et: "Igapäevane", ko: "일상 표현" } },
+      { id: "Vestlus", label: { et: "Vestlus", ko: "회화" } },
+      { id: "Küsimused", label: { et: "Küsimused", ko: "질문" } },
+      { id: "Tegevused", label: { et: "Tegevused", ko: "활동" } },
+      { id: "Aeg", label: { et: "Aeg", ko: "시간" } },
+      { id: "Rutiin", label: { et: "Rutiin", ko: "루틴" } },
     ],
   },
   {
-    id: "suhted ja emotsioonid",
+    id: "Suhted ja emotsioonid",
     icon: "❤️",
     label: { et: "Suhted ja emotsioonid", ko: "관계와 감정" },
     subcategories: [
-      { id: "suhted", label: { et: "Suhted", ko: "관계" } },
-      { id: "armastus", label: { et: "Armastus", ko: "사랑" } },
-      { id: "romantika", label: { et: "Romantika", ko: "로맨스" } },
-      { id: "emotsioonid", label: { et: "Emotsioonid", ko: "감정" } },
-      { id: "viisakus", label: { et: "Viisakus", ko: "예의" } },
-      { id: "vabandamine", label: { et: "Vabandamine", ko: "사과" } },
+      { id: "Suhted", label: { et: "Suhted", ko: "관계" } },
+      { id: "Armastus", label: { et: "Armastus", ko: "사랑" } },
+      { id: "Romantika", label: { et: "Romantika", ko: "로맨스" } },
+      { id: "Emotsioonid", label: { et: "Emotsioonid", ko: "감정" } },
+      { id: "Viisakus", label: { et: "Viisakus", ko: "예의" } },
+      { id: "Vabandamine", label: { et: "Vabandamine", ko: "사과" } },
     ],
   },
   {
-    id: "perekond",
+    id: "Perekond",
     icon: "👨‍👩‍👧",
     label: { et: "Perekond", ko: "가족" },
     subcategories: [
-      { id: "lähisugulased", label: { et: "Lähisugulased", ko: "가까운 가족" } },
-      { id: "sugulased", label: { et: "Sugulased", ko: "친척" } },
+      { id: "Lähisugulased", label: { et: "Lähisugulased", ko: "가까운 가족" } },
+      { id: "Sugulased", label: { et: "Sugulased", ko: "친척" } },
     ],
   },
   {
-    id: "inimene",
+    id: "Inimene",
     icon: "🧍",
     label: { et: "Inimene", ko: "사람" },
     subcategories: [
-      { id: "pea", label: { et: "Pea", ko: "머리" } },
-      { id: "keha", label: { et: "Keha", ko: "몸" } },
-      { id: "üldine", label: { et: "Üldine", ko: "일반" } },
-      { id: "välimus", label: { et: "Välimus", ko: "외모" } },
+      { id: "Pea", label: { et: "Pea", ko: "머리" } },
+      { id: "Keha", label: { et: "Keha", ko: "몸" } },
+      { id: "Üldine", label: { et: "Üldine", ko: "일반" } },
+      { id: "Välimus", label: { et: "Välimus", ko: "외모" } },
     ],
   },
   {
-    id: "toit",
+    id: "Toit",
     icon: "🍜",
     label: { et: "Toit", ko: "음식" },
     subcategories: [
-      { id: "köögiviljad", label: { et: "Köögiviljad", ko: "채소" } },
+      { id: "Köögiviljad", label: { et: "Köögiviljad", ko: "채소" } },
       {
-        id: "puuviljad, marjad, tsitrused",
+        id: "Puuviljad, marjad, tsitrused",
         label: { et: "Puuviljad, marjad, tsitrused", ko: "과일, 베리, 감귤류" },
       },
-      { id: "liha ja mereannid", label: { et: "Liha ja mereannid", ko: "고기와 해산물" } },
-      { id: "piim ja munad", label: { et: "Piim ja munad", ko: "유제품과 달걀" } },
-      { id: "saiatooted", label: { et: "Saiatooted", ko: "빵류" } },
-      { id: "kuivained, pähklid", label: { et: "Kuivained, pähklid", ko: "건식재료, 견과류" } },
-      { id: "õlid", label: { et: "Õlid", ko: "오일" } },
-      { id: "maitseained", label: { et: "Maitseained", ko: "양념" } },
-      { id: "konservtoidud", label: { et: "Konservtoidud", ko: "통조림 식품" } },
-      { id: "külmutatud", label: { et: "Külmutatud", ko: "냉동식품" } },
-      { id: "road", label: { et: "Road", ko: "요리" } },
-      { id: "valmistoit", label: { et: "Valmistoit", ko: "즉석식품" } },
-      { id: "maiustused ja snäkid", label: { et: "Maiustused ja snäkid", ko: "간식과 디저트" } },
-      { id: "joogid", label: { et: "Joogid", ko: "음료" } },
-      { id: "alkohol", label: { et: "Alkohol", ko: "술" } },
+      { id: "Liha ja mereannid", label: { et: "Liha ja mereannid", ko: "고기와 해산물" } },
+      { id: "Piim ja munad", label: { et: "Piim ja munad", ko: "유제품과 달걀" } },
+      { id: "Saiatooted", label: { et: "Saiatooted", ko: "빵류" } },
+      { id: "Kuivained, pähklid", label: { et: "Kuivained, pähklid", ko: "건식재료, 견과류" } },
+      { id: "Õlid", label: { et: "Õlid", ko: "오일" } },
+      { id: "Maitseained", label: { et: "Maitseained", ko: "양념" } },
+      { id: "Konservtoidud", label: { et: "Konservtoidud", ko: "통조림 식품" } },
+      { id: "Külmutatud", label: { et: "Külmutatud", ko: "냉동식품" } },
+      { id: "Road", label: { et: "Road", ko: "요리" } },
+      { id: "Valmistoit", label: { et: "Valmistoit", ko: "즉석식품" } },
+      { id: "Maiustused ja snäkid", label: { et: "Maiustused ja snäkid", ko: "간식과 디저트" } },
+      { id: "Joogid", label: { et: "Joogid", ko: "음료" } },
+      { id: "Alkohol", label: { et: "Alkohol", ko: "술" } },
     ],
   },
   {
-    id: "liikumine ja kohad",
+    id: "Liikumine ja kohad",
     icon: "🚗",
     label: { et: "Liikumine ja kohad", ko: "이동과 장소" },
     subcategories: [
-      { id: "transport", label: { et: "Transport", ko: "교통" } },
-      { id: "asukoht", label: { et: "Asukoht", ko: "위치" } },
-      { id: "suunad", label: { et: "Suunad", ko: "방향" } },
-      { id: "ostlemine", label: { et: "Ostlemine", ko: "쇼핑" } },
-      { id: "teenused / ilu", label: { et: "Teenused / ilu", ko: "서비스 / 뷰티" } },
-      { id: "restoranis", label: { et: "Restoranis", ko: "식당에서" } },
+      { id: "Transport", label: { et: "Transport", ko: "교통" } },
+      { id: "Asukoht", label: { et: "Asukoht", ko: "위치" } },
+      { id: "Suunad", label: { et: "Suunad", ko: "방향" } },
+      { id: "Ostlemine", label: { et: "Ostlemine", ko: "쇼핑" } },
+      { id: "Teenused / ilu", label: { et: "Teenused / ilu", ko: "서비스 / 뷰티" } },
+      { id: "Restoranis", label: { et: "Restoranis", ko: "식당에서" } },
     ],
   },
   {
-    id: "reisimine",
+    id: "Reisimine",
     icon: "✈️",
     label: { et: "Reisimine", ko: "여행" },
     subcategories: [
-      { id: "lennujaam", label: { et: "Lennujaam", ko: "공항" } },
-      { id: "hotell", label: { et: "Hotell", ko: "호텔" } },
-      { id: "piletid", label: { et: "Piletid", ko: "티켓" } },
-      { id: "turism", label: { et: "Turism", ko: "관광" } },
+      { id: "Lennujaam", label: { et: "Lennujaam", ko: "공항" } },
+      { id: "Hotell", label: { et: "Hotell", ko: "호텔" } },
+      { id: "Piletid", label: { et: "Piletid", ko: "티켓" } },
+      { id: "Turism", label: { et: "Turism", ko: "관광" } },
     ],
   },
   {
-    id: "tervis",
+    id: "Tervis",
     icon: "🩺",
     label: { et: "Tervis", ko: "건강" },
     subcategories: [
-      { id: "sümptomid", label: { et: "Sümptomid", ko: "증상" } },
-      { id: "arst", label: { et: "Arst", ko: "의사" } },
-      { id: "haigused", label: { et: "Haigused", ko: "질병" } },
-      { id: "apteek", label: { et: "Apteek", ko: "약국" } },
+      { id: "Sümptomid", label: { et: "Sümptomid", ko: "증상" } },
+      { id: "Arst", label: { et: "Arst", ko: "의사" } },
+      { id: "Haigused", label: { et: "Haigused", ko: "질병" } },
+      { id: "Apteek", label: { et: "Apteek", ko: "약국" } },
     ],
   },
   {
-    id: "töö ja kool",
+    id: "Töö ja kool",
     icon: "🎓",
     label: { et: "Töö ja kool", ko: "직장과 학교" },
     subcategories: [
-      { id: "töö", label: { et: "Töö", ko: "직장" } },
-      { id: "kool", label: { et: "Kool", ko: "학교" } },
+      { id: "Töö", label: { et: "Töö", ko: "직장" } },
+      { id: "Kool", label: { et: "Kool", ko: "학교" } },
     ],
   },
   {
-    id: "raha",
+    id: "Raha",
     icon: "💰",
     label: { et: "Raha", ko: "돈" },
     subcategories: [
-      { id: "raha", label: { et: "Raha", ko: "돈" } },
-      { id: "maksmine", label: { et: "Maksmine", ko: "결제" } },
-      { id: "hinnad", label: { et: "Hinnad", ko: "가격" } },
-      { id: "pank", label: { et: "Pank", ko: "은행" } },
+      { id: "Raha", label: { et: "Raha", ko: "돈" } },
+      { id: "Maksmine", label: { et: "Maksmine", ko: "결제" } },
+      { id: "Hinnad", label: { et: "Hinnad", ko: "가격" } },
+      { id: "Pank", label: { et: "Pank", ko: "은행" } },
     ],
   },
   {
-    id: "tehnoloogia",
+    id: "Tehnoloogia",
     icon: "🌐",
     label: { et: "Tehnoloogia", ko: "기술" },
     subcategories: [
-      { id: "telefon", label: { et: "Telefon", ko: "전화" } },
-      { id: "arvuti", label: { et: "Arvuti", ko: "컴퓨터" } },
-      { id: "internet", label: { et: "Internet", ko: "인터넷" } },
-      { id: "äpid", label: { et: "Äpid", ko: "앱" } },
+      { id: "Telefon", label: { et: "Telefon", ko: "전화" } },
+      { id: "Arvuti", label: { et: "Arvuti", ko: "컴퓨터" } },
+      { id: "Internet", label: { et: "Internet", ko: "인터넷" } },
+      { id: "Äpid", label: { et: "Äpid", ko: "앱" } },
     ],
   },
   {
-    id: "esemed ja asjad",
+    id: "Esemed ja asjad",
     icon: "📦",
     label: { et: "Esemed ja asjad", ko: "물건과 소지품" },
     subcategories: [
-      { id: "koduesemed", label: { et: "Koduesemed", ko: "생활용품" } },
-      { id: "riided", label: { et: "Riided", ko: "옷" } },
-      { id: "ehted", label: { et: "Ehted", ko: "장신구" } },
-      { id: "isiklikud esemed", label: { et: "Isiklikud esemed", ko: "개인 소지품" } },
+      { id: "Koduesemed", label: { et: "Koduesemed", ko: "생활용품" } },
+      { id: "Riided", label: { et: "Riided", ko: "옷" } },
+      { id: "Ehted", label: { et: "Ehted", ko: "장신구" } },
+      { id: "Isiklikud esemed", label: { et: "Isiklikud esemed", ko: "개인 소지품" } },
     ],
   },
   {
-    id: "meelelahutus",
+    id: "Meelelahutus",
     icon: "🎬",
     label: { et: "Meelelahutus", ko: "엔터테인먼트" },
     subcategories: [
-      { id: "kdrama", label: { et: "K-drama", ko: "한국 드라마" } },
-      { id: "kino", label: { et: "Kino", ko: "영화관" } },
-      { id: "teater", label: { et: "Teater", ko: "극장" } },
-      { id: "kontsert", label: { et: "Kontsert", ko: "콘서트" } },
+      { id: "Kdrama", label: { et: "K-drama", ko: "한국 드라마" } },
+      { id: "Kino", label: { et: "Kino", ko: "영화관" } },
+      { id: "Teater", label: { et: "Teater", ko: "극장" } },
+      { id: "Kontsert", label: { et: "Kontsert", ko: "콘서트" } },
     ],
   },
   {
-    id: "keelevormid",
+  id: "ajavormid",
+  icon: "🕒",
+  label: { et: "Ajavormid", ko: "시제와 시간" },
+  subcategories: [
+    { id: "kuud", label: { et: "Kuud", ko: "월" } },
+    { id: "päevad", label: { et: "Päevad", ko: "요일" } },
+    { id: "kellaaeg", label: { et: "Kellaaeg", ko: "시간 표현" } },
+    { id: "üldine", label: { et: "Üldine", ko: "일반" } },
+  ],
+},
+  {
+    id: "Keelevormid",
     icon: "🗨️",
     label: { et: "Keelevormid", ko: "문법과 표현" },
     subcategories: [
-      { id: "tegusõnad", label: { et: "Tegusõnad", ko: "동사" } },
-      { id: "määrsõna", label: { et: "Määrsõna", ko: "부사" } },
-      { id: "omadussõnad", label: { et: "Omadussõnad", ko: "형용사" } },
-      { id: "nimisõnad", label: { et: "Nimisõnad", ko: "명사" } },
-      { id: "ajavormid", label: { et: "Ajavormid", ko: "시제" } },
-      { id: "lauseehitus", label: { et: "Lauseehitus", ko: "문장 구조" } },
-      { id: "släng", label: { et: "Släng", ko: "속어" } },
-      { id: "numbrid", label: { et: "Numbrid", ko: "숫자" } },
+      { id: "Tegusõnad", label: { et: "Tegusõnad", ko: "동사" } },
+      { id: "Määrsõna", label: { et: "Määrsõna", ko: "부사" } },
+      { id: "Omadussõnad", label: { et: "Omadussõnad", ko: "형용사" } },
+      { id: "Nimisõnad", label: { et: "Nimisõnad", ko: "명사" } },
+      { id: "Lauseehitus", label: { et: "Lauseehitus", ko: "문장 구조" } },
+      { id: "Släng", label: { et: "Släng", ko: "속어" } },
+      { id: "Numbrid", label: { et: "Numbrid", ko: "숫자" } },
     ],
   },
 ];
@@ -389,6 +402,13 @@ const getTypeLabel = (value: string | null | undefined, uiLanguage: UiLanguage) 
     adverb: { et: "Määrsõna", ko: "부사" },
     phrase: { et: "Fraas", ko: "구" },
     question: { et: "Küsimus", ko: "질문" },
+    nimisõna: { et: "Nimisõna", ko: "명사" },
+    tegusõna: { et: "Tegusõna", ko: "동사" },
+    omadussõna: { et: "Omadussõna", ko: "형용사" },
+    määrsõna: { et: "Määrsõna", ko: "부사" },
+    silp: { et: "Silp", ko: "음절" },
+    täht: { et: "Täht", ko: "글자" },
+    sõna: { et: "Sõna", ko: "단어" },
   };
 
   return map[key]?.[uiLanguage] || value;
@@ -462,8 +482,9 @@ export default function Index() {
     }
 
     if (selectedCategory) {
-      result = result.filter((item) =>
-        normalizeKey(item.category).includes(normalizeKey(selectedCategory))
+      result = result.filter(
+        (item) =>
+          normalizeKey(item.category) === normalizeKey(selectedCategory)
       );
     } else {
       return [];
@@ -569,21 +590,23 @@ export default function Index() {
   const speakEtKoSequence = async (word: KoreaKeelRow) => {
     setStudyDirection("et-ko");
     await stopSpeech();
-    await speakOnce(word.et, "et-EE", 0.88);
-    await wait(360);
-    await speakOnce(word.kr, "ko-KR", 0.42);
-    await wait(260);
-    await speakOnce(word.kr, "ko-KR", 0.9);
+    await speakOnce(word.et || word.roman || "", "et-EE", 0.88);
+    await wait(450);
+    await speakOnce(word.kr, "ko-KR", 0.38);
+    await wait(320);
+    await speakOnce(word.kr, "ko-KR", 0.38);
+    await wait(320);
+    await speakOnce(word.kr, "ko-KR", 0.82);
   };
 
   const speakKoEtSequence = async (word: KoreaKeelRow) => {
     setStudyDirection("ko-et");
     await stopSpeech();
-    await speakOnce(word.kr, "ko-KR", 0.9);
+    await speakOnce(word.kr, "ko-KR", 0.82);
     await wait(360);
-    await speakOnce(word.et, "et-EE", 0.74);
-    await wait(260);
-    await speakOnce(word.et, "et-EE", 0.9);
+    await speakOnce(word.et || word.roman || "", "et-EE", 0.38);
+    await wait(320);
+    await speakOnce(word.et || word.roman || "", "et-EE", 0.82);
   };
 
   const copyWordCard = async (item: KoreaKeelRow) => {
@@ -969,7 +992,9 @@ export default function Index() {
                     !primaryIsKo ? styles.wordPrimary : styles.wordSecondary,
                   ]}
                 >
-                  {currentWord.et}
+                  {currentWord.category === "Tähestik"
+                    ? currentWord.roman || "-"
+                    : currentWord.et || currentWord.roman || "-"}
                 </Text>
 
                 <View style={styles.metaWrap}>
@@ -1119,18 +1144,27 @@ export default function Index() {
             <View style={styles.listTextWrap}>
               <Text style={styles.listKr}>{item.kr}</Text>
               <Text style={styles.listRoman}>{item.roman || "-"}</Text>
-              <Text style={styles.listEt}>{item.et}</Text>
+
+              {normalizeKey(item.category) !== normalizeKey("Tähestik") && (
+                <Text style={styles.listEt}>
+                  {item.et || item.roman || ""}
+                </Text>
+              )}
 
               <View style={styles.listMetaWrap}>
                 <Text style={styles.listMeta}>
                   {translateCategory(item.category)}
                 </Text>
+
                 {!!item.subcategory && (
                   <Text style={styles.listMeta}>
                     {translateSubcategory(item.subcategory)}
                   </Text>
                 )}
-                <Text style={styles.listMeta}>lvl {item.difficulty || "-"}</Text>
+
+                <Text style={styles.listMeta}>
+                  lvl {item.difficulty || "-"}
+                </Text>
               </View>
             </View>
           </Pressable>
@@ -1328,21 +1362,21 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    gap: 12,
+    gap: 10,
   },
   categoryCard: {
-    width: "48%",
-    minHeight: 112,
+    width: "47%",
+    minHeight: 98,
     backgroundColor: "#FFFFFF",
-    borderRadius: 24,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: "#E5E7EB",
-    padding: 18,
+    padding: 16,
     justifyContent: "space-between",
     shadowColor: "#111827",
     shadowOpacity: 0.05,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
     elevation: 2,
   },
   categoryCardActive: {
