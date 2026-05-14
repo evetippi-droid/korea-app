@@ -39,8 +39,12 @@
             "backgroundColor": "#000000"
           }
         }
-      ]
-    ],
+      ],
+  "expo-audio",
+  {
+    "enableBackgroundPlayback": true
+  }
+],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true

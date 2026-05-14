@@ -84,8 +84,8 @@ const CATEGORY_CONFIG: CategoryConfig[] = [
     icon: "🔤",
     label: { et: "Tähestik", ko: "알파벳" },
     subcategories: [
-      { id: "Tähed", label: { et: "Tähed", ko: "자모" } },
-      { id: "Silbid", label: { et: "Silbid", ko: "음절" } },
+      { id: "tähed", label: { et: "Tähed", ko: "자모" } },
+      { id: "silbid", label: { et: "Silbid", ko: "음절" } },
     ],
   },
   {
