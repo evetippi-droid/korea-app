@@ -486,8 +486,6 @@ export default function Index() {
         (item) =>
           normalizeKey(item.category) === normalizeKey(selectedCategory)
       );
-    } else {
-      return [];
     }
 
     if (selectedSubcategory !== "ALL") {
@@ -971,7 +969,7 @@ export default function Index() {
               )}
             </View>
 
-            {selectedCategory && currentWord ? (
+            {currentWord ? (
               <View style={styles.wordCard}>
                 <Text
                   style={[
@@ -992,7 +990,7 @@ export default function Index() {
                     !primaryIsKo ? styles.wordPrimary : styles.wordSecondary,
                   ]}
                 >
-                  {currentWord.category === "Tähestik"
+                  {normalizeKey(currentWord.category) === normalizeKey("Tähestik")
                     ? currentWord.roman || "-"
                     : currentWord.et || currentWord.roman || "-"}
                 </Text>
@@ -1088,7 +1086,7 @@ export default function Index() {
             ) : (
               <View style={styles.emptyBox}>
                 <Text style={styles.emptyText}>
-                  {selectedCategory ? t.emptyWords : t.emptyCategory}
+                  {t.emptyWords}
                 </Text>
               </View>
             )}
