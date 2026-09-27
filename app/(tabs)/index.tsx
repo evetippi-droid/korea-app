@@ -79,6 +79,20 @@ const DEFAULT_FORM: FormState = {
 
 const DIFFICULTY_OPTIONS = ["ALL", "1", "2", "3"];
 
+const APP_PREFS_KEY = "korea-app-learning-preferences-v1";
+
+type SavedPreferences = {
+  selectedCategory: string | null;
+  selectedSubcategory: string;
+  selectedDifficulty: string;
+  favoritesOnly: boolean;
+  shuffleMode: boolean;
+  studyDirection: StudyDirection;
+  romanizationVisible: boolean;
+  currentWordId: string | null;
+};
+
+
 const CATEGORY_CONFIG: CategoryConfig[] = [
   {
     id: "Tähestik",
@@ -323,6 +337,17 @@ const UI_TEXT = {
     listen: "Kuula",
     stopAuto: "Peata Auto",
     searchPlaceholder: "🔎 Otsi sõna...",
+    studyDirectionLabel: "Õppesuund",
+    directionEtKoHint: "1× eesti → 3× korea",
+    directionKoEtHint: "1× korea → 3× eesti",
+    romanization: "Romaniseerimine",
+    romanizationOn: "SEES",
+    romanizationOff: "VÄLJAS",
+    searchAllWords: "Kõigist sõnadest",
+    activeFilters: "Aktiivsed filtrid",
+    clearAll: "Tühista kõik valikud",
+    autoRunning: "AUTO töötab",
+    continuePrevious: "Jätkad eelmisest korrast",
   },
   ko: {
     title: "🇰🇷 한국어 단어",
@@ -371,6 +396,17 @@ const UI_TEXT = {
     listen: "듣기",
     stopAuto: "자동 중지",
     searchPlaceholder: "🔎 단어 검색...",
+    studyDirectionLabel: "학습 방향",
+    directionEtKoHint: "에스토니아어 1× → 한국어 3×",
+    directionKoEtHint: "한국어 1× → 에스토니아어 3×",
+    romanization: "로마자 표기",
+    romanizationOn: "켜짐",
+    romanizationOff: "꺼짐",
+    searchAllWords: "전체 단어",
+    activeFilters: "활성 필터",
+    clearAll: "모든 선택 지우기",
+    autoRunning: "AUTO 실행 중",
+    continuePrevious: "이전 학습 계속",
   },
 };
 
@@ -475,9 +511,14 @@ export default function Index() {
   const [selectedDifficulty, setSelectedDifficulty] = useState("ALL");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState("ALL");
+  const [romanizationVisible, setRomanizationVisible] = useState(false);
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [copiedWordId, setCopiedWordId] = useState<string | null>(null);
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
+  const [positionRestored, setPositionRestored] = useState(false);
+  const [savedWordId, setSavedWordId] = useState<string | null>(null);
+  const [resumeNoticeVisible, setResumeNoticeVisible] = useState(false);
 
   const [etVoiceId, setEtVoiceId] = useState<string | null>(null);
   const [koVoiceId, setKoVoiceId] = useState<string | null>(null);
@@ -719,6 +760,38 @@ export default function Index() {
     setAutoMode((prev) => (prev === "off" ? studyDirection : "off"));
   };
 
+  const clearAllSelections = () => {
+    setSelectedCategory(null);
+    setSelectedSubcategory("ALL");
+    setSelectedDifficulty("ALL");
+    setFavoritesOnly(false);
+    setShuffleMode(false);
+    setSearchText("");
+    setCurrentIndex(0);
+    setAutoMode("off");
+  };
+
+  const removeCategoryFilter = () => {
+    setSelectedCategory(null);
+    setSelectedSubcategory("ALL");
+    setCurrentIndex(0);
+  };
+
+  const removeSubcategoryFilter = () => {
+    setSelectedSubcategory("ALL");
+    setCurrentIndex(0);
+  };
+
+  const removeDifficultyFilter = () => {
+    setSelectedDifficulty("ALL");
+    setCurrentIndex(0);
+  };
+
+  const removeFavoritesFilter = () => {
+    setFavoritesOnly(false);
+    setCurrentIndex(0);
+  };
+
   const copyWordCard = async (item: KoreaKeelRow) => {
     try {
       const textToCopy = [item.kr, item.roman, item.et]
@@ -835,6 +908,56 @@ export default function Index() {
   };
 
   useEffect(() => {
+    try {
+      if (typeof window !== "undefined") {
+        const raw = window.localStorage.getItem(APP_PREFS_KEY);
+
+        if (raw) {
+          const saved = JSON.parse(raw) as Partial<SavedPreferences>;
+
+          if (saved.selectedCategory !== undefined) {
+            setSelectedCategory(saved.selectedCategory ?? null);
+          }
+          if (saved.selectedSubcategory) {
+            setSelectedSubcategory(saved.selectedSubcategory);
+          }
+          if (saved.selectedDifficulty) {
+            setSelectedDifficulty(saved.selectedDifficulty);
+          }
+          if (typeof saved.favoritesOnly === "boolean") {
+            setFavoritesOnly(saved.favoritesOnly);
+          }
+          if (typeof saved.shuffleMode === "boolean") {
+            setShuffleMode(saved.shuffleMode);
+          }
+          if (saved.studyDirection === "et-ko" || saved.studyDirection === "ko-et") {
+            setStudyDirection(saved.studyDirection);
+            setUiLanguage(saved.studyDirection === "et-ko" ? "et" : "ko");
+          }
+          if (typeof saved.romanizationVisible === "boolean") {
+            setRomanizationVisible(saved.romanizationVisible);
+          }
+
+          if (saved.currentWordId) {
+            setSavedWordId(saved.currentWordId);
+          } else {
+            setPositionRestored(true);
+          }
+
+          setResumeNoticeVisible(true);
+        } else {
+          setPositionRestored(true);
+        }
+      } else {
+        setPositionRestored(true);
+      }
+    } catch (error) {
+      console.log("Preference loading error:", error);
+      setPositionRestored(true);
+    } finally {
+      setPreferencesLoaded(true);
+    }
+
     loadWords();
     loadVoices();
   }, []);
@@ -866,12 +989,15 @@ export default function Index() {
   }, [autoMode]);
 
   useEffect(() => {
-    setSelectedSubcategory("ALL");
-    setCurrentIndex(0);
+    if (positionRestored) {
+      setCurrentIndex(0);
+    }
   }, [selectedCategory]);
 
   useEffect(() => {
-    setCurrentIndex(0);
+    if (positionRestored) {
+      setCurrentIndex(0);
+    }
   }, [selectedSubcategory, selectedDifficulty, favoritesOnly]);
 
   useEffect(() => {
@@ -888,6 +1014,69 @@ export default function Index() {
       setCurrentIndex(0);
     }
   }, [filteredWords.length, currentIndex]);
+
+  useEffect(() => {
+    if (!preferencesLoaded || positionRestored || !koreaKeel.length) return;
+
+    if (!savedWordId) {
+      setPositionRestored(true);
+      return;
+    }
+
+    const restoredIndex = filteredWords.findIndex((word) => word.id === savedWordId);
+    setCurrentIndex(restoredIndex >= 0 ? restoredIndex : 0);
+    setPositionRestored(true);
+    setSavedWordId(null);
+  }, [
+    preferencesLoaded,
+    positionRestored,
+    savedWordId,
+    koreaKeel.length,
+    filteredWords,
+  ]);
+
+  useEffect(() => {
+    if (!preferencesLoaded || !positionRestored) return;
+    if (typeof window === "undefined") return;
+
+    const preferences: SavedPreferences = {
+      selectedCategory,
+      selectedSubcategory,
+      selectedDifficulty,
+      favoritesOnly,
+      shuffleMode,
+      studyDirection,
+      romanizationVisible,
+      currentWordId: currentWord?.id ?? null,
+    };
+
+    try {
+      window.localStorage.setItem(APP_PREFS_KEY, JSON.stringify(preferences));
+    } catch (error) {
+      console.log("Preference saving error:", error);
+    }
+  }, [
+    preferencesLoaded,
+    positionRestored,
+    selectedCategory,
+    selectedSubcategory,
+    selectedDifficulty,
+    favoritesOnly,
+    shuffleMode,
+    studyDirection,
+    romanizationVisible,
+    currentWord?.id,
+  ]);
+
+  useEffect(() => {
+    if (!resumeNoticeVisible || !positionRestored) return;
+
+    const timer = setTimeout(() => {
+      setResumeNoticeVisible(false);
+    }, 2800);
+
+    return () => clearTimeout(timer);
+  }, [resumeNoticeVisible, positionRestored]);
 
   useEffect(() => {
     if (autoMode === "off" || !filteredWords.length) {
@@ -962,55 +1151,106 @@ export default function Index() {
                 <Text style={styles.subtitle}>{t.subtitle}</Text>
               </View>
 
-              <View style={styles.langToggle}>
-                <Pressable
-                  onPress={() => changeStudyDirection("et-ko")}
-                  style={[
-                    styles.langToggleButton,
-                    studyDirection === "et-ko" && styles.langToggleButtonActive,
-                  ]}
-                >
-                  <Text
+              <View style={styles.studyDirectionWrap}>
+                <Text style={styles.studyDirectionLabel}>
+                  {t.studyDirectionLabel}
+                </Text>
+
+                <View style={styles.langToggle}>
+                  <Pressable
+                    onPress={() => changeStudyDirection("et-ko")}
                     style={[
-                      styles.langToggleText,
-                      studyDirection === "et-ko" && styles.langToggleTextActive,
+                      styles.langToggleButton,
+                      studyDirection === "et-ko" && styles.langToggleButtonActive,
                     ]}
                   >
-                    ET→KO
-                  </Text>
-                </Pressable>
+                    <Text
+                      style={[
+                        styles.langToggleText,
+                        studyDirection === "et-ko" && styles.langToggleTextActive,
+                      ]}
+                    >
+                      ET→KO
+                    </Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => changeStudyDirection("ko-et")}
+                    style={[
+                      styles.langToggleButton,
+                      studyDirection === "ko-et" && styles.langToggleButtonActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.langToggleText,
+                        studyDirection === "ko-et" && styles.langToggleTextActive,
+                      ]}
+                    >
+                      KO→ET
+                    </Text>
+                  </Pressable>
+                </View>
+
+                <Text style={styles.directionHint}>
+                  {studyDirection === "et-ko"
+                    ? t.directionEtKoHint
+                    : t.directionKoEtHint}
+                </Text>
 
                 <Pressable
-                  onPress={() => changeStudyDirection("ko-et")}
                   style={[
-                    styles.langToggleButton,
-                    studyDirection === "ko-et" && styles.langToggleButtonActive,
+                    styles.romanizationToggle,
+                    romanizationVisible && styles.romanizationToggleActive,
                   ]}
+                  onPress={() => setRomanizationVisible((prev) => !prev)}
                 >
                   <Text
                     style={[
-                      styles.langToggleText,
-                      studyDirection === "ko-et" && styles.langToggleTextActive,
+                      styles.romanizationToggleText,
+                      romanizationVisible && styles.romanizationToggleTextActive,
                     ]}
                   >
-                    KO→ET
+                    {t.romanization}:{" "}
+                    {romanizationVisible ? t.romanizationOn : t.romanizationOff}
                   </Text>
                 </Pressable>
               </View>
             </View>
 
+            {resumeNoticeVisible && positionRestored && (
+              <View style={styles.resumeNotice}>
+                <Text style={styles.resumeNoticeText}>
+                  {t.continuePrevious}
+                  {selectedCategory
+                    ? ` · ${translateCategory(selectedCategory)}`
+                    : ""}
+                  {filteredWords.length
+                    ? ` · ${currentIndex + 1} / ${filteredWords.length}`
+                    : ""}
+                </Text>
+              </View>
+            )}
+
             <View style={styles.topActions}>
               <View style={styles.searchSectionNearAdd}>
                 <View style={styles.searchRow}>
-                  <TextInput
-                    style={styles.searchInput}
-                    placeholder={t.searchPlaceholder}
-                    placeholderTextColor="#6B7280"
-                    value={searchText}
-                    onChangeText={setSearchText}
-                    autoCorrect={false}
-                    autoCapitalize="none"
-                  />
+                  <View style={styles.searchFieldWrap}>
+                    <TextInput
+                      style={styles.searchInput}
+                      placeholder={t.searchPlaceholder}
+                      placeholderTextColor="#6B7280"
+                      value={searchText}
+                      onChangeText={setSearchText}
+                      autoCorrect={false}
+                      autoCapitalize="none"
+                    />
+                    <View style={styles.searchScopeBadge}>
+                      <Text style={styles.searchScopeText}>
+                        {t.searchAllWords}
+                      </Text>
+                    </View>
+                  </View>
 
                   {!!searchText.trim() && (
                     <Pressable
@@ -1021,12 +1261,6 @@ export default function Index() {
                     </Pressable>
                   )}
                 </View>
-
-                {!!searchText.trim() && (
-                  <Text style={styles.searchResultText}>
-                    Leitud: {filteredWords.length}
-                  </Text>
-                )}
               </View>
 
               <Pressable style={styles.addButton} onPress={openAddModal}>
@@ -1048,14 +1282,17 @@ export default function Index() {
                       isActive && styles.categoryCardActive,
                     ]}
                     onPress={() => {
-                      setSelectedCategory((prev) =>
-                        prev === category.id ? null : category.id
-                      );
+                      const willClear =
+                        normalizeKey(selectedCategory) === normalizeKey(category.id);
+
+                      setSelectedCategory(willClear ? null : category.id);
                       setSelectedSubcategory("ALL");
+                      setCurrentIndex(0);
                     }}
                   >
                     <Text style={styles.categoryIcon}>{category.icon}</Text>
                     <Text
+                      numberOfLines={2}
                       style={[
                         styles.categoryTitle,
                         isActive && styles.categoryTitleActive,
@@ -1072,11 +1309,7 @@ export default function Index() {
               <>
                 <Text style={styles.sectionTitle}>{t.subcategories}</Text>
 
-                <ScrollView
-                  horizontal={false}
-                  showsVerticalScrollIndicator={false}
-                  contentContainerStyle={styles.subcategoryWrap}
-                >
+                <View style={styles.subcategoryWrap}>
                   <PillButton
                     label={t.allSubcategories}
                     active={selectedSubcategory === "ALL"}
@@ -1100,7 +1333,7 @@ export default function Index() {
                       }
                     />
                   ))}
-                </ScrollView>
+                </View>
               </>
             )}
 
@@ -1132,27 +1365,81 @@ export default function Index() {
                 active={shuffleMode}
                 onPress={() => setShuffleMode((prev) => !prev)}
               />
+              <Pressable
+                style={styles.clearAllButton}
+                onPress={clearAllSelections}
+              >
+                <Text style={styles.clearAllButtonText}>{t.clearAll}</Text>
+              </Pressable>
             </View>
 
-            <View style={styles.statsBox}>
-              <Text style={styles.statsText}>
-                {t.total}: {koreaKeel.length}
+            {(selectedCategory ||
+              selectedSubcategory !== "ALL" ||
+              selectedDifficulty !== "ALL" ||
+              favoritesOnly) && (
+              <View style={styles.activeFiltersSection}>
+                <Text style={styles.activeFiltersLabel}>{t.activeFilters}</Text>
+                <View style={styles.activeFilterWrap}>
+                  {!!selectedCategory && (
+                    <Pressable
+                      style={styles.activeFilterChip}
+                      onPress={removeCategoryFilter}
+                    >
+                      <Text style={styles.activeFilterText}>
+                        {translateCategory(selectedCategory)} ✕
+                      </Text>
+                    </Pressable>
+                  )}
+
+                  {selectedSubcategory !== "ALL" && (
+                    <Pressable
+                      style={styles.activeFilterChip}
+                      onPress={removeSubcategoryFilter}
+                    >
+                      <Text style={styles.activeFilterText}>
+                        {translateSubcategory(selectedSubcategory)} ✕
+                      </Text>
+                    </Pressable>
+                  )}
+
+                  {selectedDifficulty !== "ALL" && (
+                    <Pressable
+                      style={styles.activeFilterChip}
+                      onPress={removeDifficultyFilter}
+                    >
+                      <Text style={styles.activeFilterText}>
+                        {uiLanguage === "et" ? "Tase" : "레벨"}{" "}
+                        {selectedDifficulty} ✕
+                      </Text>
+                    </Pressable>
+                  )}
+
+                  {favoritesOnly && (
+                    <Pressable
+                      style={styles.activeFilterChip}
+                      onPress={removeFavoritesFilter}
+                    >
+                      <Text style={styles.activeFilterText}>
+                        {uiLanguage === "et" ? "Favoriidid" : "즐겨찾기"} ✕
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
+              </View>
+            )}
+
+            <View style={styles.statsCompact}>
+              <Text style={styles.statsCompactText}>
+                {t.total} {koreaKeel.length}
               </Text>
-              <Text style={styles.statsText}>
-                {t.filtered}: {filteredWords.length}
+              <Text style={styles.statsDot}>•</Text>
+              <Text style={styles.statsCompactText}>
+                {t.filtered} {filteredWords.length}
               </Text>
-              <Text style={styles.statsText}>
-                {t.selected}:{" "}
-                {selectedCategory ? translateCategory(selectedCategory) : "-"}
+              <Text style={styles.statsDot}>•</Text>
+              <Text style={styles.statsCompactText}>
+                {filteredWords.length ? currentIndex + 1 : 0}/{filteredWords.length}
               </Text>
-              {!!selectedCategory && (
-                <Text style={styles.statsText}>
-                  {t.subcategory}:{" "}
-                  {selectedSubcategory === "ALL"
-                    ? t.allSubcategories
-                    : translateSubcategory(selectedSubcategory)}
-                </Text>
-              )}
             </View>
 
             {currentWord ? (
@@ -1163,11 +1450,18 @@ export default function Index() {
                       {currentWord.et || currentWord.roman || "-"}
                     </Text>
 
-                    <Text style={[styles.wordLine, styles.wordSecondary, styles.targetWordLine]}>
+                    <Text
+                      style={[
+                        styles.wordLine,
+                        styles.wordSecondary,
+                        styles.targetWordLine,
+                      ]}
+                    >
                       {currentWord.kr}
                     </Text>
 
-                    {!!currentWord.roman &&
+                    {romanizationVisible &&
+                      !!currentWord.roman &&
                       normalizeKey(currentWord.roman) !==
                         normalizeKey(currentWord.et) && (
                         <Text
@@ -1187,7 +1481,7 @@ export default function Index() {
                       {currentWord.kr}
                     </Text>
 
-                    {!!currentWord.roman && (
+                    {romanizationVisible && !!currentWord.roman && (
                       <Text
                         style={[
                           styles.wordLine,
@@ -1213,48 +1507,43 @@ export default function Index() {
                   </>
                 )}
 
-                <View style={styles.metaWrap}>
-                  <Text style={styles.metaBadge}>
-                    {t.type}: {getTypeLabel(currentWord.type, uiLanguage)}
+                <Pressable
+                  style={styles.listenButton}
+                  onPress={() => speakSelectedDirection(currentWord)}
+                >
+                  <Text style={styles.listenButtonText}>
+                    {studyDirection === "et-ko"
+                      ? `🔊 ${t.listen} · 1×ET + 3×KO`
+                      : `🔊 ${t.listen} · 1×KO + 3×ET`}
                   </Text>
-                  <Text style={styles.metaBadge}>
-                    {t.difficulty}: {currentWord.difficulty || "-"}
-                  </Text>
-                  <Text style={styles.metaBadge}>
-                    {t.category}: {translateCategory(currentWord.category)}
-                  </Text>
-                  {!!currentWord.subcategory && (
-                    <Text style={styles.metaBadge}>
-                      {t.subcategory}:{" "}
-                      {translateSubcategory(currentWord.subcategory)}
-                    </Text>
-                  )}
-                </View>
+                </Pressable>
 
-                <View style={styles.buttonRow}>
-                  <Pressable
-                    style={styles.primaryButton}
-                    onPress={() => speakSelectedDirection(currentWord)}
-                  >
-                    <Text style={styles.primaryButtonText}>🔊 {t.listen}</Text>
-                  </Pressable>
-
-                  <Pressable
+                <Pressable
+                  style={[
+                    styles.autoButton,
+                    autoMode !== "off" && styles.autoButtonActive,
+                  ]}
+                  onPress={toggleAuto}
+                >
+                  <Text
                     style={[
-                      styles.secondaryButton,
-                      autoMode !== "off" && styles.activeModeButton,
+                      styles.autoButtonText,
+                      autoMode !== "off" && styles.autoButtonTextActive,
                     ]}
-                    onPress={toggleAuto}
                   >
-                    <Text style={styles.secondaryButtonText}>
-                      {autoMode !== "off"
-                        ? t.stopAuto
-                        : studyDirection === "et-ko"
-                        ? t.autoEtKo
-                        : t.autoKoEt}
-                    </Text>
-                  </Pressable>
-                </View>
+                    {autoMode !== "off"
+                      ? `■ ${t.stopAuto}`
+                      : studyDirection === "et-ko"
+                      ? `▶ ${t.autoEtKo}`
+                      : `▶ ${t.autoKoEt}`}
+                  </Text>
+                </Pressable>
+
+                {autoMode !== "off" && (
+                  <Text style={styles.autoStatusText}>
+                    {t.autoRunning} · {currentIndex + 1} / {filteredWords.length}
+                  </Text>
+                )}
 
                 <View style={styles.buttonRow}>
                   <Pressable
@@ -1276,9 +1565,7 @@ export default function Index() {
               </View>
             ) : (
               <View style={styles.emptyBox}>
-                <Text style={styles.emptyText}>
-                  {t.emptyWords}
-                </Text>
+                <Text style={styles.emptyText}>{t.emptyWords}</Text>
               </View>
             )}
 
@@ -1293,62 +1580,51 @@ export default function Index() {
               currentWord?.id === item.id && styles.activeListItem,
             ]}
           >
-            <View style={styles.itemActionsLeft}>
+            <View style={styles.listTextWrap}>
+              <Text style={styles.listKr}>{item.kr}</Text>
+
+              <Text style={styles.listMeaningLine} numberOfLines={2}>
+                {item.roman || "-"}
+                {normalizeKey(item.category) !== normalizeKey("Tähestik") &&
+                item.et
+                  ? ` · ${item.et}`
+                  : ""}
+              </Text>
+
+              <Text style={styles.listMetaLine} numberOfLines={1}>
+                {translateCategory(item.category)}
+                {item.subcategory
+                  ? ` · ${translateSubcategory(item.subcategory)}`
+                  : ""}
+                {` · lvl ${item.difficulty || "-"}`}
+              </Text>
+            </View>
+
+            <View style={styles.itemActionsRight}>
               <Pressable
-                style={[styles.iconButton, styles.copyIconButton]}
+                style={[styles.compactIconButton, styles.copyIconButton]}
                 onPress={() => copyWordCard(item)}
               >
-                <Text style={styles.iconText}>📋</Text>
+                <Text style={styles.compactIconText}>
+                  {copiedWordId === item.id ? "✓" : "📋"}
+                </Text>
               </Pressable>
 
-              {copiedWordId === item.id ? (
-                <Text style={styles.copiedFeedback}>{t.copied}</Text>
-              ) : (
-                <View style={styles.feedbackSpacer} />
-              )}
-
               <Pressable
-                style={styles.iconButton}
+                style={styles.compactIconButton}
                 onPress={() => toggleFavorite(item)}
               >
-                <Text style={styles.iconText}>
+                <Text style={styles.compactIconText}>
                   {item.is_favorite ? "★" : "☆"}
                 </Text>
               </Pressable>
 
               <Pressable
-                style={styles.iconButton}
+                style={styles.compactIconButton}
                 onPress={() => openEditModal(item)}
               >
-                <Text style={styles.iconText}>✏️</Text>
+                <Text style={styles.compactIconText}>✏️</Text>
               </Pressable>
-            </View>
-
-            <View style={styles.listTextWrap}>
-              <Text style={styles.listKr}>{item.kr}</Text>
-              <Text style={styles.listRoman}>{item.roman || "-"}</Text>
-
-              {normalizeKey(item.category) !== normalizeKey("Tähestik") && (
-                <Text style={styles.listEt}>
-                  {item.et || item.roman || ""}
-                </Text>
-              )}
-
-              <View style={styles.listMetaWrap}>
-                <Text style={styles.listMeta}>
-                  {translateCategory(item.category)}
-                </Text>
-
-                {!!item.subcategory && (
-                  <Text style={styles.listMeta}>
-                    {translateSubcategory(item.subcategory)}
-                  </Text>
-                )}
-
-                <Text style={styles.listMeta}>
-                  lvl {item.difficulty || "-"}
-                </Text>
-              </View>
             </View>
           </Pressable>
         )}
@@ -1474,7 +1750,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F6F7FB",
   },
   listContent: {
-    paddingBottom: 120,
+    paddingBottom: 100,
   },
   loadingWrap: {
     flex: 1,
@@ -1487,130 +1763,222 @@ const styles = StyleSheet.create({
     color: "#111827",
   },
   container: {
-    padding: 16,
-    paddingBottom: 4,
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 2,
   },
   headerRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 12,
+    gap: 10,
   },
   headerTextWrap: {
     flex: 1,
+    paddingTop: 2,
   },
   title: {
-    fontSize: 31,
+    fontSize: 27,
     fontWeight: "900",
     color: "#111827",
-    marginBottom: 6,
+    marginBottom: 3,
   },
   subtitle: {
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: 13,
+    lineHeight: 18,
     fontWeight: "600",
-    color: "#111827",
+    color: "#4B5563",
+  },
+  studyDirectionWrap: {
+    width: 172,
+    alignItems: "center",
+  },
+  studyDirectionLabel: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#6B7280",
+    marginBottom: 4,
   },
   langToggle: {
     flexDirection: "row",
     backgroundColor: "#E5E7EB",
-    borderRadius: 16,
-    padding: 4,
+    borderRadius: 14,
+    padding: 3,
   },
   langToggleButton: {
-    minWidth: 72,
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    borderRadius: 12,
+    minWidth: 78,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderRadius: 11,
     alignItems: "center",
   },
   langToggleButtonActive: {
     backgroundColor: "#111827",
   },
   langToggleText: {
-    fontSize: 14,
-    fontWeight: "800",
+    fontSize: 13,
+    fontWeight: "900",
     color: "#111827",
   },
   langToggleTextActive: {
     color: "#FFFFFF",
   },
-  searchSection: {
-    marginTop: 18,
+  directionHint: {
+    fontSize: 10.5,
+    lineHeight: 14,
+    fontWeight: "700",
+    color: "#6B7280",
+    marginTop: 4,
+    textAlign: "center",
+  },
+  romanizationToggle: {
+    marginTop: 5,
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    backgroundColor: "#FFFFFF",
+  },
+  romanizationToggleActive: {
+    backgroundColor: "#EEF2FF",
+    borderColor: "#818CF8",
+  },
+  romanizationToggleText: {
+    fontSize: 10.5,
+    fontWeight: "800",
+    color: "#4B5563",
+  },
+  romanizationToggleTextActive: {
+    color: "#3730A3",
+  },
+  resumeNotice: {
+    marginTop: 8,
+    backgroundColor: "#ECFDF5",
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  resumeNoticeText: {
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: "800",
+    color: "#065F46",
+    textAlign: "center",
+  },
+  topActions: {
+    marginTop: 10,
+    marginBottom: 2,
+  },
+  searchSectionNearAdd: {
+    marginTop: 2,
   },
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 7,
+  },
+  searchFieldWrap: {
+    flex: 1,
+    position: "relative",
+    justifyContent: "center",
   },
   searchInput: {
-    flex: 1,
     backgroundColor: "#FFFFFF",
-    borderRadius: 18,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: "#D1D5DB",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
+    paddingLeft: 13,
+    paddingRight: 118,
+    paddingVertical: 11,
+    fontSize: 14,
     fontWeight: "700",
     color: "#111827",
   },
+  searchScopeBadge: {
+    position: "absolute",
+    right: 9,
+    backgroundColor: "#F3F4F6",
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  searchScopeText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#6B7280",
+  },
   clearSearchButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
+    width: 42,
+    height: 42,
+    borderRadius: 13,
     backgroundColor: "#E5E7EB",
     alignItems: "center",
     justifyContent: "center",
   },
   clearSearchButtonText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "900",
     color: "#111827",
   },
-  searchResultText: {
-    marginTop: 8,
+  addButton: {
+    marginTop: 7,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#374151",
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  addButtonText: {
     fontSize: 14,
-    fontWeight: "800",
-    color: "#4B5563",
+    fontWeight: "900",
+    color: "#111827",
   },
   sectionTitle: {
-    fontSize: 21,
+    fontSize: 16,
     fontWeight: "900",
     color: "#111827",
-    marginTop: 20,
-    marginBottom: 12,
+    marginTop: 13,
+    marginBottom: 7,
   },
   categoryGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    gap: 10,
+    gap: 7,
   },
   categoryCard: {
-    width: "47%",
-    minHeight: 98,
+    width: "48.8%",
+    minHeight: 56,
     backgroundColor: "#FFFFFF",
-    borderRadius: 22,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: "#E5E7EB",
-    padding: 16,
-    justifyContent: "space-between",
+    paddingHorizontal: 11,
+    paddingVertical: 9,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
     shadowColor: "#111827",
-    shadowOpacity: 0.05,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 2,
+    shadowOpacity: 0.025,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 1,
   },
   categoryCardActive: {
     backgroundColor: "#111827",
     borderColor: "#111827",
+    borderWidth: 2,
   },
   categoryIcon: {
-    fontSize: 28,
+    fontSize: 21,
   },
   categoryTitle: {
-    fontSize: 18,
-    lineHeight: 24,
+    flex: 1,
+    fontSize: 13.5,
+    lineHeight: 17,
     fontWeight: "900",
     color: "#111827",
   },
@@ -1620,255 +1988,261 @@ const styles = StyleSheet.create({
   subcategoryWrap: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
+    gap: 7,
   },
   controlsWrap: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
+    gap: 7,
   },
   pillButton: {
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#E5E7EB",
     borderRadius: 999,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   pillButtonActive: {
     backgroundColor: "#111827",
     borderColor: "#111827",
   },
   pillText: {
-    fontSize: 14,
+    fontSize: 12.5,
     fontWeight: "800",
     color: "#111827",
   },
   pillTextActive: {
     color: "#FFFFFF",
   },
-  statsBox: {
+  clearAllButton: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    padding: 16,
-    marginTop: 16,
-  },
-  statsText: {
-    fontSize: 15,
-    lineHeight: 22,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 4,
-  },
-  wordCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 26,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    padding: 22,
-    marginTop: 16,
-    shadowColor: "#111827",
-    shadowOpacity: 0.04,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 2,
-  },
-  wordLine: {
-    color: "#111827",
-    letterSpacing: 0.2,
-  },
-  wordPrimary: {
-    fontSize: 34,
-    lineHeight: 42,
-    fontWeight: "900",
-  },
-  wordSecondary: {
-    fontSize: 28,
-    lineHeight: 36,
-    fontWeight: "800",
-  },
-  targetWordLine: {
-    marginTop: 10,
-  },
-  wordRoman: {
-    fontSize: 30,
-    lineHeight: 38,
-    fontWeight: "800",
-    color: "#111827",
-  },
-  romanLine: {
-    marginTop: 10,
-    marginBottom: 10,
-  },
-  metaWrap: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 18,
-  },
-  metaBadge: {
-    backgroundColor: "#F3F4F6",
+    borderWidth: 1.5,
+    borderColor: "#EF4444",
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    overflow: "hidden",
-    fontSize: 13,
-    fontWeight: "800",
-    color: "#111827",
   },
-  buttonRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 14,
-  },
-  primaryButton: {
-    flex: 1,
-    backgroundColor: "#111827",
-    borderRadius: 16,
-    paddingVertical: 15,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  directionButtonActive: {
-    borderWidth: 2,
-    borderColor: "#6366F1",
-  },
-  primaryButtonText: {
-    fontSize: 15,
+  clearAllButtonText: {
+    fontSize: 12.5,
     fontWeight: "900",
-    color: "#FFFFFF",
+    color: "#DC2626",
   },
-  secondaryButton: {
-    flex: 1,
-    backgroundColor: "#E5E7EB",
-    borderRadius: 16,
-    paddingVertical: 15,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  activeModeButton: {
-    backgroundColor: "#D1FAE5",
-  },
-  secondaryButtonText: {
-    fontSize: 14,
-    lineHeight: 18,
-    fontWeight: "900",
-    color: "#111827",
-    textAlign: "center",
-    paddingHorizontal: 8,
-  },
-  navButton: {
-    flex: 1,
-    backgroundColor: "#EEF2FF",
-    borderRadius: 16,
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  navButtonText: {
-    fontSize: 15,
-    fontWeight: "900",
-    color: "#312E81",
-  },
-  emptyBox: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    padding: 22,
-    marginTop: 16,
-  },
-  emptyText: {
-    fontSize: 17,
-    lineHeight: 24,
-    fontWeight: "700",
-    color: "#111827",
-  },
-  topActions: {
-    marginTop: 16,
-    marginBottom: 4,
-  },
-  searchSectionNearAdd: {
-    marginTop: 12,
-  },
-  addButton: {
-    backgroundColor: "#111827",
-    borderRadius: 16,
-    paddingVertical: 15,
-    alignItems: "center",
-  },
-  addButtonText: {
-    fontSize: 16,
-    fontWeight: "900",
-    color: "#FFFFFF",
-  },
-  listItem: {
-    marginHorizontal: 16,
+  activeFiltersSection: {
     marginTop: 10,
+  },
+  activeFiltersLabel: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#6B7280",
+    marginBottom: 5,
+  },
+  activeFilterWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  activeFilterChip: {
+    backgroundColor: "#EEF2FF",
+    borderWidth: 1,
+    borderColor: "#C7D2FE",
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  activeFilterText: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#3730A3",
+  },
+  statsCompact: {
+    marginTop: 10,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 2,
+  },
+  statsCompactText: {
+    fontSize: 11.5,
+    fontWeight: "800",
+    color: "#4B5563",
+  },
+  statsDot: {
+    fontSize: 11,
+    color: "#9CA3AF",
+  },
+  wordCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
     borderWidth: 1,
     borderColor: "#E5E7EB",
-    padding: 16,
+    padding: 17,
+    marginTop: 11,
+    shadowColor: "#111827",
+    shadowOpacity: 0.035,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
+  },
+  wordLine: {
+    color: "#111827",
+    letterSpacing: 0.1,
+    textAlign: "center",
+  },
+  wordPrimary: {
+    fontSize: 30,
+    lineHeight: 37,
+    fontWeight: "900",
+  },
+  wordSecondary: {
+    fontSize: 25,
+    lineHeight: 32,
+    fontWeight: "800",
+  },
+  targetWordLine: {
+    marginTop: 6,
+  },
+  wordRoman: {
+    fontSize: 18,
+    lineHeight: 24,
+    fontWeight: "700",
+    color: "#6B7280",
+  },
+  romanLine: {
+    marginTop: 5,
+    marginBottom: 1,
+  },
+  listenButton: {
+    marginTop: 13,
+    backgroundColor: "#EEF2FF",
+    borderWidth: 1,
+    borderColor: "#C7D2FE",
+    borderRadius: 13,
+    minHeight: 42,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 10,
+  },
+  listenButtonText: {
+    fontSize: 13.5,
+    fontWeight: "900",
+    color: "#312E81",
+    textAlign: "center",
+  },
+  autoButton: {
+    marginTop: 8,
+    backgroundColor: "#111827",
+    borderRadius: 14,
+    minHeight: 47,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 12,
+  },
+  autoButtonActive: {
+    backgroundColor: "#22C55E",
+  },
+  autoButtonText: {
+    fontSize: 15,
+    fontWeight: "900",
+    color: "#FFFFFF",
+    textAlign: "center",
+  },
+  autoButtonTextActive: {
+    color: "#FFFFFF",
+  },
+  autoStatusText: {
+    marginTop: 6,
+    fontSize: 11.5,
+    lineHeight: 16,
+    fontWeight: "900",
+    color: "#15803D",
+    textAlign: "center",
+  },
+  buttonRow: {
     flexDirection: "row",
-    gap: 14,
+    gap: 8,
+    marginTop: 9,
+  },
+  navButton: {
+    flex: 1,
+    minHeight: 50,
+    backgroundColor: "#F3F4F6",
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  navButtonText: {
+    fontSize: 15.5,
+    fontWeight: "900",
+    color: "#111827",
+  },
+  emptyBox: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    padding: 18,
+    marginTop: 11,
+  },
+  emptyText: {
+    fontSize: 15,
+    lineHeight: 21,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  listItem: {
+    marginHorizontal: 14,
+    marginTop: 7,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    flexDirection: "row",
+    gap: 8,
     alignItems: "flex-start",
   },
   activeListItem: {
     borderWidth: 2,
     borderColor: "#111827",
   },
-  itemActionsLeft: {
-    width: 58,
-    alignItems: "center",
-    gap: 10,
-    paddingTop: 2,
-  },
   listTextWrap: {
     flex: 1,
-    paddingRight: 2,
+    minWidth: 0,
   },
   listKr: {
-    fontSize: 24,
-    lineHeight: 30,
+    fontSize: 20,
+    lineHeight: 25,
     fontWeight: "900",
     color: "#111827",
   },
-  listRoman: {
-    fontSize: 21,
-    lineHeight: 27,
-    fontWeight: "800",
-    color: "#111827",
-    marginTop: 6,
+  listMeaningLine: {
+    fontSize: 13.5,
+    lineHeight: 18,
+    fontWeight: "700",
+    color: "#374151",
+    marginTop: 2,
   },
-  listEt: {
-    fontSize: 21,
-    lineHeight: 27,
-    fontWeight: "800",
-    color: "#111827",
-    marginTop: 6,
+  listMetaLine: {
+    fontSize: 10.5,
+    lineHeight: 14,
+    fontWeight: "700",
+    color: "#9CA3AF",
+    marginTop: 4,
   },
-  listMetaWrap: {
+  itemActionsRight: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 10,
+    gap: 4,
+    paddingTop: 1,
   },
-  listMeta: {
-    backgroundColor: "#F3F4F6",
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    overflow: "hidden",
-    fontSize: 12,
-    fontWeight: "800",
-    color: "#111827",
-  },
-  iconButton: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
+  compactIconButton: {
+    width: 31,
+    height: 31,
+    borderRadius: 9,
     backgroundColor: "#F3F4F6",
     alignItems: "center",
     justifyContent: "center",
@@ -1876,19 +2250,8 @@ const styles = StyleSheet.create({
   copyIconButton: {
     backgroundColor: "#EAF1FF",
   },
-  iconText: {
-    fontSize: 18,
-  },
-  copiedFeedback: {
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: "900",
-    color: "#111827",
-    textAlign: "center",
-    minHeight: 16,
-  },
-  feedbackSpacer: {
-    minHeight: 16,
+  compactIconText: {
+    fontSize: 14,
   },
   modalSafe: {
     flex: 1,
