@@ -251,7 +251,7 @@ const CATEGORY_CONFIG: CategoryConfig[] = [
   {
   id: "ajavormid",
   icon: "🕒",
-  label: { et: "Ajavormid", ko: "시제와 시간" },
+  label: { et: "Aeg ja kuupäev", ko: "시간과 날짜" },
   subcategories: [
     { id: "kuud", label: { et: "Kuud", ko: "월" } },
     { id: "päevad", label: { et: "Päevad", ko: "요일" } },
