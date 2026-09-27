@@ -521,21 +521,41 @@ export default function Index() {
   const loadWords = async () => {
     setLoading(true);
 
-    const { data, error } = await supabase
-      .from("korea_keel")
-      .select(
-        "id, created_at, kr, et, roman, type, difficulty, category, subcategory, is_favorite"
-      )
-      .order("created_at", { ascending: true });
+    try {
+      const allWords: KoreaKeelRow[] = [];
+      const pageSize = 1000;
+      let from = 0;
 
-    if (error) {
-      Alert.alert(UI_TEXT.et.error, error.message);
+      while (true) {
+        const { data, error } = await supabase
+          .from("korea_keel")
+          .select(
+            "id, created_at, kr, et, roman, type, difficulty, category, subcategory, is_favorite"
+          )
+          .order("created_at", { ascending: true })
+          .range(from, from + pageSize - 1);
+
+        if (error) {
+          Alert.alert(UI_TEXT.et.error, error.message);
+          return;
+        }
+
+        const rows = (data || []) as KoreaKeelRow[];
+        allWords.push(...rows);
+
+        if (rows.length < pageSize) {
+          break;
+        }
+
+        from += pageSize;
+      }
+
+      setKoreaKeel(allWords);
+    } catch (error) {
+      console.log("Word loading error:", error);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setKoreaKeel((data || []) as KoreaKeelRow[]);
-    setLoading(false);
   };
 
   const loadVoices = async () => {
