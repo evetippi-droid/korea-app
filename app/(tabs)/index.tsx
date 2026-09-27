@@ -81,6 +81,20 @@ const DIFFICULTY_OPTIONS = ["ALL", "1", "2", "3"];
 
 const APP_PREFS_KEY = "korea-app-learning-preferences-v1";
 
+const getDailyStartIndex = (length: number) => {
+  if (length <= 0) return 0;
+
+  const today = new Date();
+  const dateKey = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+
+  let hash = 0;
+  for (let i = 0; i < dateKey.length; i += 1) {
+    hash = (hash * 31 + dateKey.charCodeAt(i)) >>> 0;
+  }
+
+  return hash % length;
+};
+
 type SavedPreferences = {
   selectedCategory: string | null;
   selectedSubcategory: string;
@@ -940,20 +954,13 @@ export default function Index() {
 
           if (saved.currentWordId) {
             setSavedWordId(saved.currentWordId);
-          } else {
-            setPositionRestored(true);
           }
 
           setResumeNoticeVisible(true);
-        } else {
-          setPositionRestored(true);
         }
-      } else {
-        setPositionRestored(true);
       }
     } catch (error) {
       console.log("Preference loading error:", error);
-      setPositionRestored(true);
     } finally {
       setPreferencesLoaded(true);
     }
@@ -1017,14 +1024,22 @@ export default function Index() {
 
   useEffect(() => {
     if (!preferencesLoaded || positionRestored || !koreaKeel.length) return;
+    if (!filteredWords.length) return;
 
-    if (!savedWordId) {
-      setPositionRestored(true);
-      return;
+    if (savedWordId) {
+      const restoredIndex = filteredWords.findIndex(
+        (word) => word.id === savedWordId
+      );
+
+      if (restoredIndex >= 0) {
+        setCurrentIndex(restoredIndex);
+      } else {
+        setCurrentIndex(getDailyStartIndex(filteredWords.length));
+      }
+    } else {
+      setCurrentIndex(getDailyStartIndex(filteredWords.length));
     }
 
-    const restoredIndex = filteredWords.findIndex((word) => word.id === savedWordId);
-    setCurrentIndex(restoredIndex >= 0 ? restoredIndex : 0);
     setPositionRestored(true);
     setSavedWordId(null);
   }, [
