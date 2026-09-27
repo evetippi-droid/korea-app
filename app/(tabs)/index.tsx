@@ -251,7 +251,7 @@ const CATEGORY_CONFIG: CategoryConfig[] = [
   {
   id: "ajavormid",
   icon: "🕒",
-  label: { et: "Aeg ja kuupäev", ko: "시간과 날짜" },
+  label: { et: "Ajavormid", ko: "시제와 시간" },
   subcategories: [
     { id: "kuud", label: { et: "Kuud", ko: "월" } },
     { id: "päevad", label: { et: "Päevad", ko: "요일" } },
@@ -378,6 +378,46 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const normalizeKey = (value: string | null | undefined) =>
   (value || "").trim().toLowerCase();
+
+// Tähestiku erihääldus: ekraanil jääb jamo märk, kõnesünteesile anname
+// loomulikult hääldatava korea kuju.
+const HANGUL_PRONUNCIATION_MAP: Record<string, string> = {
+  // Konsonantide ametlikud nimed
+  "ㄱ": "기역",
+  "ㄴ": "니은",
+  "ㄷ": "디귿",
+  "ㄹ": "리을",
+  "ㅁ": "미음",
+  "ㅂ": "비읍",
+  "ㅅ": "시옷",
+  "ㅇ": "이응",
+  "ㅈ": "지읒",
+  "ㅊ": "치읓",
+  "ㅋ": "키읔",
+  "ㅌ": "티읕",
+  "ㅍ": "피읖",
+  "ㅎ": "히읗",
+
+  // Vokaalid – hääldamiseks kasutame silpi, mitte üksikut jamo märki
+  "ㅏ": "아",
+  "ㅑ": "야",
+  "ㅓ": "어",
+  "ㅕ": "여",
+  "ㅗ": "오",
+  "ㅛ": "요",
+  "ㅜ": "우",
+  "ㅠ": "유",
+  "ㅡ": "으",
+  "ㅣ": "이",
+};
+
+const getKoreanSpeechText = (word: KoreaKeelRow) => {
+  if (normalizeKey(word.category) === normalizeKey("Tähestik")) {
+    return HANGUL_PRONUNCIATION_MAP[word.kr] || word.kr;
+  }
+
+  return word.kr;
+};
 
 const getPreferredVoice = (
   voices: VoiceInfo[],
@@ -628,23 +668,27 @@ export default function Index() {
     await stopSpeech();
 
     const etText = word.et || word.roman || "";
+    const koText = getKoreanSpeechText(word);
 
+    // ET → KO: 1x eesti/romaniseeritud vaste + 3x korea
     await speakOnce(etText, "et-EE", 0.88);
     await wait(450);
 
-    await speakOnce(word.kr, "ko-KR", 0.38);
+    await speakOnce(koText, "ko-KR", 0.38);
     await wait(320);
-    await speakOnce(word.kr, "ko-KR", 0.38);
+    await speakOnce(koText, "ko-KR", 0.38);
     await wait(320);
-    await speakOnce(word.kr, "ko-KR", 0.82);
+    await speakOnce(koText, "ko-KR", 0.82);
   };
 
   const speakKoEtSequence = async (word: KoreaKeelRow) => {
     await stopSpeech();
 
     const etText = word.et || word.roman || "";
+    const koText = getKoreanSpeechText(word);
 
-    await speakOnce(word.kr, "ko-KR", 0.82);
+    // KO → ET: 1x korea + 3x eesti/romaniseeritud vaste
+    await speakOnce(koText, "ko-KR", 0.82);
     await wait(450);
 
     await speakOnce(etText, "et-EE", 0.38);
