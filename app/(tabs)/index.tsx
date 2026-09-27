@@ -922,39 +922,6 @@ export default function Index() {
               </View>
             </View>
 
-            <View style={styles.searchSection}>
-              <View style={styles.searchRow}>
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder={
-                    uiLanguage === "et"
-                      ? "🔎 Otsi korea, eesti või romaniseeritud sõna..."
-                      : "🔎 한국어, 에스토니아어 또는 로마자 검색..."
-                  }
-                  placeholderTextColor="#6B7280"
-                  value={searchText}
-                  onChangeText={setSearchText}
-                  autoCorrect={false}
-                  autoCapitalize="none"
-                />
-
-                {!!searchText.trim() && (
-                  <Pressable
-                    style={styles.clearSearchButton}
-                    onPress={() => setSearchText("")}
-                  >
-                    <Text style={styles.clearSearchButtonText}>✕</Text>
-                  </Pressable>
-                )}
-              </View>
-
-              {!!searchText.trim() && (
-                <Text style={styles.searchResultText}>
-                  {uiLanguage === "et" ? "Leitud" : "검색 결과"}: {filteredWords.length}
-                </Text>
-              )}
-            </View>
-
             <Text style={styles.sectionTitle}>{t.categories}</Text>
             <View style={styles.categoryGrid}>
               {CATEGORY_CONFIG.map((category) => {
@@ -1187,6 +1154,39 @@ export default function Index() {
               <Pressable style={styles.addButton} onPress={openAddModal}>
                 <Text style={styles.addButtonText}>{t.addWord}</Text>
               </Pressable>
+
+              <View style={styles.searchSectionNearAdd}>
+                <View style={styles.searchRow}>
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder={
+                      uiLanguage === "et"
+                        ? "🔎 Otsi sõna..."
+                        : "🔎 단어 검색..."
+                    }
+                    placeholderTextColor="#6B7280"
+                    value={searchText}
+                    onChangeText={setSearchText}
+                    autoCorrect={false}
+                    autoCapitalize="none"
+                  />
+
+                  {!!searchText.trim() && (
+                    <Pressable
+                      style={styles.clearSearchButton}
+                      onPress={() => setSearchText("")}
+                    >
+                      <Text style={styles.clearSearchButtonText}>✕</Text>
+                    </Pressable>
+                  )}
+                </View>
+
+                {!!searchText.trim() && (
+                  <Text style={styles.searchResultText}>
+                    {uiLanguage === "et" ? "Leitud" : "검색 결과"}: {filteredWords.length}
+                  </Text>
+                )}
+              </View>
             </View>
 
             <Text style={styles.sectionTitle}>{t.wordList}</Text>
@@ -1692,6 +1692,9 @@ const styles = StyleSheet.create({
   topActions: {
     marginTop: 16,
     marginBottom: 4,
+  },
+  searchSectionNearAdd: {
+    marginTop: 12,
   },
   addButton: {
     backgroundColor: "#111827",
