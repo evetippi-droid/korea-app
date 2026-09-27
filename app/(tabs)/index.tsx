@@ -81,11 +81,15 @@ const DIFFICULTY_OPTIONS = ["ALL", "1", "2", "3"];
 
 const APP_PREFS_KEY = "korea-app-learning-preferences-v1";
 
+const getLocalDateKey = () => {
+  const today = new Date();
+  return `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+};
+
 const getDailyStartIndex = (length: number) => {
   if (length <= 0) return 0;
 
-  const today = new Date();
-  const dateKey = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+  const dateKey = getLocalDateKey();
 
   let hash = 0;
   for (let i = 0; i < dateKey.length; i += 1) {
@@ -104,6 +108,7 @@ type SavedPreferences = {
   studyDirection: StudyDirection;
   romanizationVisible: boolean;
   currentWordId: string | null;
+  lastUsedDate: string | null;
 };
 
 
@@ -362,6 +367,7 @@ const UI_TEXT = {
     clearAll: "Tühista kõik valikud",
     autoRunning: "AUTO töötab",
     continuePrevious: "Jätkad eelmisest korrast",
+    dailyStart: "Päeva algussõna",
   },
   ko: {
     title: "🇰🇷 한국어 단어",
@@ -421,6 +427,7 @@ const UI_TEXT = {
     clearAll: "모든 선택 지우기",
     autoRunning: "AUTO 실행 중",
     continuePrevious: "이전 학습 계속",
+    dailyStart: "오늘의 시작 단어",
   },
 };
 
@@ -532,7 +539,9 @@ export default function Index() {
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [positionRestored, setPositionRestored] = useState(false);
   const [savedWordId, setSavedWordId] = useState<string | null>(null);
+  const [savedLastUsedDate, setSavedLastUsedDate] = useState<string | null>(null);
   const [resumeNoticeVisible, setResumeNoticeVisible] = useState(false);
+  const [dailyStartNoticeVisible, setDailyStartNoticeVisible] = useState(false);
 
   const [etVoiceId, setEtVoiceId] = useState<string | null>(null);
   const [koVoiceId, setKoVoiceId] = useState<string | null>(null);
@@ -956,7 +965,13 @@ export default function Index() {
             setSavedWordId(saved.currentWordId);
           }
 
-          setResumeNoticeVisible(true);
+          if (saved.lastUsedDate) {
+            setSavedLastUsedDate(saved.lastUsedDate);
+          }
+
+          if (saved.lastUsedDate === getLocalDateKey()) {
+            setResumeNoticeVisible(true);
+          }
         }
       }
     } catch (error) {
@@ -1026,7 +1041,10 @@ export default function Index() {
     if (!preferencesLoaded || positionRestored || !koreaKeel.length) return;
     if (!filteredWords.length) return;
 
-    if (savedWordId) {
+    const todayKey = getLocalDateKey();
+    const sameDay = savedLastUsedDate === todayKey;
+
+    if (sameDay && savedWordId) {
       const restoredIndex = filteredWords.findIndex(
         (word) => word.id === savedWordId
       );
@@ -1037,7 +1055,9 @@ export default function Index() {
         setCurrentIndex(getDailyStartIndex(filteredWords.length));
       }
     } else {
+      // New day (or no saved history): choose a deterministic daily start word.
       setCurrentIndex(getDailyStartIndex(filteredWords.length));
+      setDailyStartNoticeVisible(true);
     }
 
     setPositionRestored(true);
@@ -1046,6 +1066,7 @@ export default function Index() {
     preferencesLoaded,
     positionRestored,
     savedWordId,
+    savedLastUsedDate,
     koreaKeel.length,
     filteredWords,
   ]);
@@ -1063,6 +1084,7 @@ export default function Index() {
       studyDirection,
       romanizationVisible,
       currentWordId: currentWord?.id ?? null,
+      lastUsedDate: getLocalDateKey(),
     };
 
     try {
@@ -1092,6 +1114,16 @@ export default function Index() {
 
     return () => clearTimeout(timer);
   }, [resumeNoticeVisible, positionRestored]);
+
+  useEffect(() => {
+    if (!dailyStartNoticeVisible || !positionRestored) return;
+
+    const timer = setTimeout(() => {
+      setDailyStartNoticeVisible(false);
+    }, 2800);
+
+    return () => clearTimeout(timer);
+  }, [dailyStartNoticeVisible, positionRestored]);
 
   useEffect(() => {
     if (autoMode === "off" || !filteredWords.length) {
@@ -1237,6 +1269,20 @@ export default function Index() {
               <View style={styles.resumeNotice}>
                 <Text style={styles.resumeNoticeText}>
                   {t.continuePrevious}
+                  {selectedCategory
+                    ? ` · ${translateCategory(selectedCategory)}`
+                    : ""}
+                  {filteredWords.length
+                    ? ` · ${currentIndex + 1} / ${filteredWords.length}`
+                    : ""}
+                </Text>
+              </View>
+            )}
+
+            {dailyStartNoticeVisible && positionRestored && (
+              <View style={styles.dailyStartNotice}>
+                <Text style={styles.dailyStartNoticeText}>
+                  {t.dailyStart}
                   {selectedCategory
                     ? ` · ${translateCategory(selectedCategory)}`
                     : ""}
@@ -1880,6 +1926,22 @@ const styles = StyleSheet.create({
     lineHeight: 15,
     fontWeight: "800",
     color: "#065F46",
+    textAlign: "center",
+  },
+  dailyStartNotice: {
+    marginTop: 8,
+    backgroundColor: "#EFF6FF",
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  dailyStartNoticeText: {
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: "800",
+    color: "#1D4ED8",
     textAlign: "center",
   },
   topActions: {
