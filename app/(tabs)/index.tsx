@@ -619,10 +619,13 @@ export default function Index() {
   };
 
   const speakEtKoSequence = async (word: KoreaKeelRow) => {
-    setStudyDirection("et-ko");
     await stopSpeech();
-    await speakOnce(word.et || word.roman || "", "et-EE", 0.88);
+
+    const etText = word.et || word.roman || "";
+
+    await speakOnce(etText, "et-EE", 0.88);
     await wait(450);
+
     await speakOnce(word.kr, "ko-KR", 0.38);
     await wait(320);
     await speakOnce(word.kr, "ko-KR", 0.38);
@@ -631,13 +634,38 @@ export default function Index() {
   };
 
   const speakKoEtSequence = async (word: KoreaKeelRow) => {
-    setStudyDirection("ko-et");
     await stopSpeech();
+
+    const etText = word.et || word.roman || "";
+
     await speakOnce(word.kr, "ko-KR", 0.82);
-    await wait(360);
-    await speakOnce(word.et || word.roman || "", "et-EE", 0.38);
+    await wait(450);
+
+    await speakOnce(etText, "et-EE", 0.38);
     await wait(320);
-    await speakOnce(word.et || word.roman || "", "et-EE", 0.82);
+    await speakOnce(etText, "et-EE", 0.38);
+    await wait(320);
+    await speakOnce(etText, "et-EE", 0.82);
+  };
+
+  const speakSelectedDirection = async (word: KoreaKeelRow) => {
+    if (studyDirection === "et-ko") {
+      await speakEtKoSequence(word);
+    } else {
+      await speakKoEtSequence(word);
+    }
+  };
+
+  const changeStudyDirection = (direction: StudyDirection) => {
+    setStudyDirection(direction);
+
+    if (autoMode !== "off") {
+      setAutoMode(direction);
+    }
+  };
+
+  const toggleAuto = () => {
+    setAutoMode((prev) => (prev === "off" ? studyDirection : "off"));
   };
 
   const copyWordCard = async (item: KoreaKeelRow) => {
@@ -859,8 +887,6 @@ export default function Index() {
     };
   }, [autoMode, currentIndex, filteredWords]);
 
-  const primaryIsKo = studyDirection === "et-ko";
-
   if (loading) {
     return (
       <SafeAreaView style={styles.safe}>
@@ -887,39 +913,74 @@ export default function Index() {
 
               <View style={styles.langToggle}>
                 <Pressable
-                  onPress={() => setUiLanguage("et")}
+                  onPress={() => changeStudyDirection("et-ko")}
                   style={[
                     styles.langToggleButton,
-                    uiLanguage === "et" && styles.langToggleButtonActive,
+                    studyDirection === "et-ko" && styles.langToggleButtonActive,
                   ]}
                 >
                   <Text
                     style={[
                       styles.langToggleText,
-                      uiLanguage === "et" && styles.langToggleTextActive,
+                      studyDirection === "et-ko" && styles.langToggleTextActive,
                     ]}
                   >
-                    ET
+                    ET→KO
                   </Text>
                 </Pressable>
 
                 <Pressable
-                  onPress={() => setUiLanguage("ko")}
+                  onPress={() => changeStudyDirection("ko-et")}
                   style={[
                     styles.langToggleButton,
-                    uiLanguage === "ko" && styles.langToggleButtonActive,
+                    studyDirection === "ko-et" && styles.langToggleButtonActive,
                   ]}
                 >
                   <Text
                     style={[
                       styles.langToggleText,
-                      uiLanguage === "ko" && styles.langToggleTextActive,
+                      studyDirection === "ko-et" && styles.langToggleTextActive,
                     ]}
                   >
-                    KO
+                    KO→ET
                   </Text>
                 </Pressable>
               </View>
+            </View>
+
+            <View style={styles.topActions}>
+              <View style={styles.searchSectionNearAdd}>
+                <View style={styles.searchRow}>
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="🔎 Otsi sõna..."
+                    placeholderTextColor="#6B7280"
+                    value={searchText}
+                    onChangeText={setSearchText}
+                    autoCorrect={false}
+                    autoCapitalize="none"
+                  />
+
+                  {!!searchText.trim() && (
+                    <Pressable
+                      style={styles.clearSearchButton}
+                      onPress={() => setSearchText("")}
+                    >
+                      <Text style={styles.clearSearchButtonText}>✕</Text>
+                    </Pressable>
+                  )}
+                </View>
+
+                {!!searchText.trim() && (
+                  <Text style={styles.searchResultText}>
+                    Leitud: {filteredWords.length}
+                  </Text>
+                )}
+              </View>
+
+              <Pressable style={styles.addButton} onPress={openAddModal}>
+                <Text style={styles.addButtonText}>{t.addWord}</Text>
+              </Pressable>
             </View>
 
             <Text style={styles.sectionTitle}>{t.categories}</Text>
@@ -1030,29 +1091,61 @@ export default function Index() {
 
             {currentWord ? (
               <View style={styles.wordCard}>
-                <Text
-                  style={[
-                    styles.wordLine,
-                    primaryIsKo ? styles.wordPrimary : styles.wordSecondary,
-                  ]}
-                >
-                  {currentWord.kr}
-                </Text>
+                {studyDirection === "et-ko" ? (
+                  <>
+                    <Text style={[styles.wordLine, styles.wordPrimary]}>
+                      {currentWord.et || currentWord.roman || "-"}
+                    </Text>
 
-                <Text style={[styles.wordLine, styles.romanLine, styles.wordRoman]}>
-                  {currentWord.roman || "-"}
-                </Text>
+                    <Text style={[styles.wordLine, styles.wordSecondary, styles.targetWordLine]}>
+                      {currentWord.kr}
+                    </Text>
 
-                <Text
-                  style={[
-                    styles.wordLine,
-                    !primaryIsKo ? styles.wordPrimary : styles.wordSecondary,
-                  ]}
-                >
-                  {normalizeKey(currentWord.category) === normalizeKey("Tähestik")
-                    ? currentWord.roman || "-"
-                    : currentWord.et || currentWord.roman || "-"}
-                </Text>
+                    {!!currentWord.roman &&
+                      normalizeKey(currentWord.roman) !==
+                        normalizeKey(currentWord.et) && (
+                        <Text
+                          style={[
+                            styles.wordLine,
+                            styles.romanLine,
+                            styles.wordRoman,
+                          ]}
+                        >
+                          {currentWord.roman}
+                        </Text>
+                      )}
+                  </>
+                ) : (
+                  <>
+                    <Text style={[styles.wordLine, styles.wordPrimary]}>
+                      {currentWord.kr}
+                    </Text>
+
+                    {!!currentWord.roman && (
+                      <Text
+                        style={[
+                          styles.wordLine,
+                          styles.romanLine,
+                          styles.wordRoman,
+                        ]}
+                      >
+                        {currentWord.roman}
+                      </Text>
+                    )}
+
+                    {!!currentWord.et && (
+                      <Text
+                        style={[
+                          styles.wordLine,
+                          styles.wordSecondary,
+                          styles.targetWordLine,
+                        ]}
+                      >
+                        {currentWord.et}
+                      </Text>
+                    )}
+                  </>
+                )}
 
                 <View style={styles.metaWrap}>
                   <Text style={styles.metaBadge}>
@@ -1074,52 +1167,25 @@ export default function Index() {
 
                 <View style={styles.buttonRow}>
                   <Pressable
-                    style={[
-                      styles.primaryButton,
-                      studyDirection === "et-ko" && styles.directionButtonActive,
-                    ]}
-                    onPress={() => speakEtKoSequence(currentWord)}
+                    style={styles.primaryButton}
+                    onPress={() => speakSelectedDirection(currentWord)}
                   >
-                    <Text style={styles.primaryButtonText}>{t.etToKo}</Text>
-                  </Pressable>
-
-                  <Pressable
-                    style={[
-                      styles.primaryButton,
-                      studyDirection === "ko-et" && styles.directionButtonActive,
-                    ]}
-                    onPress={() => speakKoEtSequence(currentWord)}
-                  >
-                    <Text style={styles.primaryButtonText}>{t.koToEt}</Text>
-                  </Pressable>
-                </View>
-
-                <View style={styles.buttonRow}>
-                  <Pressable
-                    style={[
-                      styles.secondaryButton,
-                      autoMode === "et-ko" && styles.activeModeButton,
-                    ]}
-                    onPress={() =>
-                      setAutoMode((prev) => (prev === "et-ko" ? "off" : "et-ko"))
-                    }
-                  >
-                    <Text style={styles.secondaryButtonText}>
-                      {autoMode === "et-ko" ? t.stopAutoEtKo : t.autoEtKo}
-                    </Text>
+                    <Text style={styles.primaryButtonText}>🔊 Kuula</Text>
                   </Pressable>
 
                   <Pressable
                     style={[
                       styles.secondaryButton,
-                      autoMode === "ko-et" && styles.activeModeButton,
+                      autoMode !== "off" && styles.activeModeButton,
                     ]}
-                    onPress={() =>
-                      setAutoMode((prev) => (prev === "ko-et" ? "off" : "ko-et"))
-                    }
+                    onPress={toggleAuto}
                   >
                     <Text style={styles.secondaryButtonText}>
-                      {autoMode === "ko-et" ? t.stopAutoKoEt : t.autoKoEt}
+                      {autoMode !== "off"
+                        ? "Peata Auto"
+                        : studyDirection === "et-ko"
+                        ? "Auto ET→KO"
+                        : "Auto KO→ET"}
                     </Text>
                   </Pressable>
                 </View>
@@ -1149,45 +1215,6 @@ export default function Index() {
                 </Text>
               </View>
             )}
-
-            <View style={styles.topActions}>
-              <Pressable style={styles.addButton} onPress={openAddModal}>
-                <Text style={styles.addButtonText}>{t.addWord}</Text>
-              </Pressable>
-
-              <View style={styles.searchSectionNearAdd}>
-                <View style={styles.searchRow}>
-                  <TextInput
-                    style={styles.searchInput}
-                    placeholder={
-                      uiLanguage === "et"
-                        ? "🔎 Otsi sõna..."
-                        : "🔎 단어 검색..."
-                    }
-                    placeholderTextColor="#6B7280"
-                    value={searchText}
-                    onChangeText={setSearchText}
-                    autoCorrect={false}
-                    autoCapitalize="none"
-                  />
-
-                  {!!searchText.trim() && (
-                    <Pressable
-                      style={styles.clearSearchButton}
-                      onPress={() => setSearchText("")}
-                    >
-                      <Text style={styles.clearSearchButtonText}>✕</Text>
-                    </Pressable>
-                  )}
-                </View>
-
-                {!!searchText.trim() && (
-                  <Text style={styles.searchResultText}>
-                    {uiLanguage === "et" ? "Leitud" : "검색 결과"}: {filteredWords.length}
-                  </Text>
-                )}
-              </View>
-            </View>
 
             <Text style={styles.sectionTitle}>{t.wordList}</Text>
           </View>
@@ -1424,9 +1451,9 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   langToggleButton: {
-    minWidth: 52,
+    minWidth: 72,
     paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     borderRadius: 12,
     alignItems: "center",
   },
@@ -1595,6 +1622,9 @@ const styles = StyleSheet.create({
     fontSize: 28,
     lineHeight: 36,
     fontWeight: "800",
+  },
+  targetWordLine: {
+    marginTop: 10,
   },
   wordRoman: {
     fontSize: 30,
