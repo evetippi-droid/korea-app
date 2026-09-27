@@ -320,6 +320,9 @@ const UI_TEXT = {
     error: "Viga",
     copied: "Copied ✓",
     copyFailed: "Kopeerimine ebaõnnestus",
+    listen: "Kuula",
+    stopAuto: "Peata Auto",
+    searchPlaceholder: "🔎 Otsi sõna...",
   },
   ko: {
     title: "🇰🇷 한국어 단어",
@@ -365,6 +368,9 @@ const UI_TEXT = {
     error: "오류",
     copied: "Copied ✓",
     copyFailed: "복사 실패",
+    listen: "듣기",
+    stopAuto: "자동 중지",
+    searchPlaceholder: "🔎 단어 검색...",
   },
 };
 
@@ -658,6 +664,7 @@ export default function Index() {
 
   const changeStudyDirection = (direction: StudyDirection) => {
     setStudyDirection(direction);
+    setUiLanguage(direction === "et-ko" ? "et" : "ko");
 
     if (autoMode !== "off") {
       setAutoMode(direction);
@@ -953,7 +960,7 @@ export default function Index() {
                 <View style={styles.searchRow}>
                   <TextInput
                     style={styles.searchInput}
-                    placeholder="🔎 Otsi sõna..."
+                    placeholder={t.searchPlaceholder}
                     placeholderTextColor="#6B7280"
                     value={searchText}
                     onChangeText={setSearchText}
@@ -1170,7 +1177,7 @@ export default function Index() {
                     style={styles.primaryButton}
                     onPress={() => speakSelectedDirection(currentWord)}
                   >
-                    <Text style={styles.primaryButtonText}>🔊 Kuula</Text>
+                    <Text style={styles.primaryButtonText}>🔊 {t.listen}</Text>
                   </Pressable>
 
                   <Pressable
@@ -1182,10 +1189,10 @@ export default function Index() {
                   >
                     <Text style={styles.secondaryButtonText}>
                       {autoMode !== "off"
-                        ? "Peata Auto"
+                        ? t.stopAuto
                         : studyDirection === "et-ko"
-                        ? "Auto ET→KO"
-                        : "Auto KO→ET"}
+                        ? t.autoEtKo
+                        : t.autoKoEt}
                     </Text>
                   </Pressable>
                 </View>
