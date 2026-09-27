@@ -1,4 +1,5 @@
 import * as Clipboard from "expo-clipboard";
+import * as KeepAwake from "expo-keep-awake";
 import * as Speech from "expo-speech";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -424,6 +425,7 @@ export default function Index() {
 
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [shuffleMode, setShuffleMode] = useState(false);
+  const [searchText, setSearchText] = useState("");
   const [selectedDifficulty, setSelectedDifficulty] = useState("ALL");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState("ALL");
@@ -469,6 +471,16 @@ export default function Index() {
   }, [categoryMap, selectedCategory]);
 
   const filteredWords = useMemo(() => {
+    const searchQuery = normalizeKey(searchText);
+
+    if (searchQuery) {
+      return koreaKeel.filter((item) =>
+        [item.kr, item.roman, item.et].some((value) =>
+          normalizeKey(value).includes(searchQuery)
+        )
+      );
+    }
+
     let result = [...koreaKeel];
 
     if (favoritesOnly) {
@@ -499,6 +511,7 @@ export default function Index() {
   }, [
     favoritesOnly,
     koreaKeel,
+    searchText,
     selectedCategory,
     selectedDifficulty,
     selectedSubcategory,
@@ -752,6 +765,28 @@ export default function Index() {
   }, [autoMode]);
 
   useEffect(() => {
+    const keepAwakeTag = "korea-auto-mode";
+
+    const updateKeepAwake = async () => {
+      try {
+        if (autoMode !== "off") {
+          await KeepAwake.activateKeepAwakeAsync(keepAwakeTag);
+        } else {
+          await KeepAwake.deactivateKeepAwake(keepAwakeTag);
+        }
+      } catch (error) {
+        console.log("Keep awake error:", error);
+      }
+    };
+
+    updateKeepAwake();
+
+    return () => {
+      KeepAwake.deactivateKeepAwake(keepAwakeTag).catch(() => {});
+    };
+  }, [autoMode]);
+
+  useEffect(() => {
     setSelectedSubcategory("ALL");
     setCurrentIndex(0);
   }, [selectedCategory]);
@@ -759,6 +794,10 @@ export default function Index() {
   useEffect(() => {
     setCurrentIndex(0);
   }, [selectedSubcategory, selectedDifficulty, favoritesOnly]);
+
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [searchText]);
 
   useEffect(() => {
     if (filteredWords.length === 0) {
@@ -881,6 +920,39 @@ export default function Index() {
                   </Text>
                 </Pressable>
               </View>
+            </View>
+
+            <View style={styles.searchSection}>
+              <View style={styles.searchRow}>
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder={
+                    uiLanguage === "et"
+                      ? "🔎 Otsi korea, eesti või romaniseeritud sõna..."
+                      : "🔎 한국어, 에스토니아어 또는 로마자 검색..."
+                  }
+                  placeholderTextColor="#6B7280"
+                  value={searchText}
+                  onChangeText={setSearchText}
+                  autoCorrect={false}
+                  autoCapitalize="none"
+                />
+
+                {!!searchText.trim() && (
+                  <Pressable
+                    style={styles.clearSearchButton}
+                    onPress={() => setSearchText("")}
+                  >
+                    <Text style={styles.clearSearchButtonText}>✕</Text>
+                  </Pressable>
+                )}
+              </View>
+
+              {!!searchText.trim() && (
+                <Text style={styles.searchResultText}>
+                  {uiLanguage === "et" ? "Leitud" : "검색 결과"}: {filteredWords.length}
+                </Text>
+              )}
             </View>
 
             <Text style={styles.sectionTitle}>{t.categories}</Text>
@@ -1368,6 +1440,45 @@ const styles = StyleSheet.create({
   },
   langToggleTextActive: {
     color: "#FFFFFF",
+  },
+  searchSection: {
+    marginTop: 18,
+  },
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  searchInput: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  clearSearchButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: "#E5E7EB",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  clearSearchButtonText: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: "#111827",
+  },
+  searchResultText: {
+    marginTop: 8,
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#4B5563",
   },
   sectionTitle: {
     fontSize: 21,
