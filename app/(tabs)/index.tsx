@@ -2017,16 +2017,16 @@ const styles = StyleSheet.create({
   },
   clearAllButton: {
     backgroundColor: "#FFFFFF",
-    borderWidth: 1.5,
-    borderColor: "#EF4444",
+    borderWidth: 1,
+    borderColor: "#F1C7C7",
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   clearAllButtonText: {
     fontSize: 12.5,
-    fontWeight: "900",
-    color: "#DC2626",
+    fontWeight: "800",
+    color: "#A85D5D",
   },
   activeFiltersSection: {
     marginTop: 10,
