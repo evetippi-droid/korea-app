@@ -1047,7 +1047,12 @@ export default function Index() {
                       styles.categoryCard,
                       isActive && styles.categoryCardActive,
                     ]}
-                    onPress={() => setSelectedCategory(category.id)}
+                    onPress={() => {
+                      setSelectedCategory((prev) =>
+                        prev === category.id ? null : category.id
+                      );
+                      setSelectedSubcategory("ALL");
+                    }}
                   >
                     <Text style={styles.categoryIcon}>{category.icon}</Text>
                     <Text
@@ -1086,7 +1091,13 @@ export default function Index() {
                         normalizeKey(selectedSubcategory) ===
                         normalizeKey(subcategory.id)
                       }
-                      onPress={() => setSelectedSubcategory(subcategory.id)}
+                      onPress={() =>
+                        setSelectedSubcategory((prev) =>
+                          normalizeKey(prev) === normalizeKey(subcategory.id)
+                            ? "ALL"
+                            : subcategory.id
+                        )
+                      }
                     />
                   ))}
                 </ScrollView>
@@ -1100,7 +1111,11 @@ export default function Index() {
                   key={level}
                   label={level === "ALL" ? "ALL" : `Level ${level}`}
                   active={selectedDifficulty === level}
-                  onPress={() => setSelectedDifficulty(level)}
+                  onPress={() =>
+                    setSelectedDifficulty((prev) =>
+                      prev === level && level !== "ALL" ? "ALL" : level
+                    )
+                  }
                 />
               ))}
             </View>
