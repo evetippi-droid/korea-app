@@ -1507,14 +1507,14 @@ export default function Index() {
               <View style={styles.wordCard}>
                 {studyDirection === "et-ko" ? (
                   <>
-                    <Text style={[styles.wordLine, styles.wordPrimary]}>
+                    <Text style={[styles.wordLine, styles.etHintText]}>
                       {currentWord.et || currentWord.roman || "-"}
                     </Text>
 
                     <Text
                       style={[
                         styles.wordLine,
-                        styles.wordSecondary,
+                        styles.koLearningText,
                         styles.targetWordLine,
                       ]}
                     >
@@ -1529,7 +1529,7 @@ export default function Index() {
                           style={[
                             styles.wordLine,
                             styles.romanLine,
-                            styles.wordRoman,
+                            styles.romanizationFocusText,
                           ]}
                         >
                           {currentWord.roman}
@@ -2176,6 +2176,24 @@ const styles = StyleSheet.create({
     fontSize: 25,
     lineHeight: 32,
     fontWeight: "800",
+  },
+  etHintText: {
+    fontSize: 18,
+    lineHeight: 24,
+    fontWeight: "700",
+    color: "#6B7280",
+  },
+  koLearningText: {
+    fontSize: 24,
+    lineHeight: 31,
+    fontWeight: "900",
+    color: "#111827",
+  },
+  romanizationFocusText: {
+    fontSize: 35,
+    lineHeight: 42,
+    fontWeight: "900",
+    color: "#111827",
   },
   targetWordLine: {
     marginTop: 6,
